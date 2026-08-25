@@ -1,50 +1,50 @@
-# Atlas — Interactive Trip Builder
+# Atlas Trip Builder
 
-Projeto autoral Front-end reconstruído em React, com integração real à Open-Meteo API.
+Projeto desenvolvido durante meus estudos de React para praticar criação de componentes, estados, formulários e consumo de API.
 
-## Tecnologias
+A ideia do Atlas é montar um planejamento simples de viagem em etapas. O usuário escolhe o destino, as datas, com quem vai viajar, interesses e orçamento. No final, o projeto gera uma sugestão de roteiro e uma divisão do orçamento.
+
+## Tecnologias usadas
 
 - React
-- Vite
 - JavaScript
 - CSS
-- Open-Meteo Geocoding API
-- Open-Meteo Forecast API
+- Vite
+- Open-Meteo API
 - localStorage
 
-## O que a API faz
+## O que pratiquei
 
-Ao selecionar um destino, o app:
-1. Busca a cidade na Geocoding API.
-2. Obtém latitude, longitude e fuso horário.
-3. Usa essas coordenadas na Forecast API.
-4. Exibe temperatura atual e previsão dos próximos dias.
+- Componentes em React
+- `useState`
+- Eventos e formulários
+- Renderização condicional
+- Listas com `map()`
+- Consumo de API com `fetch` e `async/await`
+- Tratamento de erros
+- Salvamento de dados no `localStorage`
+- Responsividade
 
 ## Funcionalidades
 
-- Aplicação React componentizada
-- Fluxo de planejamento em 5 etapas
-- Dados meteorológicos reais via API
-- Estados controlados com React
-- Validação de etapas
-- Interesses múltiplos
-- Orçamento dinâmico
-- Geração de itinerário
-- localStorage
-- Layout responsivo
-- GitHub Actions preparado para deploy do Vite no Pages
+- Planejamento de viagem em 5 etapas
+- Seleção de destino
+- Consulta de clima pela Open-Meteo
+- Escolha de datas, companhia e interesses
+- Definição de orçamento
+- Geração de roteiro de até 7 dias
+- Estimativa de gastos
+- Dados da viagem salvos no navegador
 
-## Rodar localmente
+## Como rodar
 
 ```bash
 npm install
 npm run dev
 ```
 
-Depois abra o endereço exibido pelo Vite.
+Depois, abra no navegador o endereço mostrado pelo Vite.
 
-## Build
+## Observação
 
-```bash
-npm run build
-```
+O roteiro e os valores apresentados são exemplos gerados para fins de estudo. Os dados de clima são consultados na Open-Meteo API.

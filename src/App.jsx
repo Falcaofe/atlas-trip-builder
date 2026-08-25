@@ -17,7 +17,7 @@ export default function App() {
       <footer className="footer">
         <div>
           <strong>ATLAS</strong>
-          <span>Interactive Trip Builder</span>
+          <span>Projeto de estudos em React</span>
         </div>
 
         <p>React • Open-Meteo API • localStorage</p>

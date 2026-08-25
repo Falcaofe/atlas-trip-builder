@@ -2,7 +2,7 @@ export default function Hero() {
   return (
     <section className="intro" id="inicio">
       <div className="intro-copy">
-        <div className="edition">TRIP BUILDER / REACT</div>
+        <div className="edition">PROJETO DE ESTUDOS / REACT</div>
 
         <h1>
           PARA ONDE
@@ -11,9 +11,9 @@ export default function Hero() {
         </h1>
 
         <p>
-          Monte uma viagem do seu jeito. O Atlas usa React para controlar
-          toda a experiência e consulta uma API real para trazer dados do
-          destino e previsão do tempo.
+          Monte uma viagem do seu jeito. O Atlas foi criado para praticar React em um fluxo de planejamento de viagem.
+          Ao escolher um destino, o projeto consulta a Open-Meteo para mostrar
+          informações de clima e previsão do tempo.
         </p>
 
         <a className="primary" href="#builder">
@@ -52,7 +52,7 @@ export default function Hero() {
         </div>
 
         <div className="route-line">✈︎ · · · · · · · · · · ·</div>
-        <div className="stamp">API<br />LIVE</div>
+        <div className="stamp">OPEN<br />METEO</div>
       </div>
     </section>
   )

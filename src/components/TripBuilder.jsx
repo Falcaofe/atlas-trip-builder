@@ -1,153 +1,212 @@
-import { useMemo, useState } from 'react'
+import { useState } from 'react'
 import { getDestinationWeather } from '../services/openMeteo'
 import WeatherCard from './WeatherCard'
 
-const DESTINATIONS = [
-  {
-    city: 'Paris',
-    country: 'França',
-    image: 'https://images.unsplash.com/photo-1502602898657-3e91760cbb34?auto=format&fit=crop&w=900&q=85',
-  },
-  {
-    city: 'Kyoto',
-    country: 'Japão',
-    image: 'https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?auto=format&fit=crop&w=900&q=85',
-  },
-  {
-    city: 'Bali',
-    country: 'Indonésia',
-    image: 'https://images.unsplash.com/photo-1537996194471-e657df975ab4?auto=format&fit=crop&w=900&q=85',
-  },
-  {
-    city: 'Lisboa',
-    country: 'Portugal',
-    image: 'https://images.unsplash.com/photo-1555881400-74d7acaacd8b?auto=format&fit=crop&w=900&q=85',
-  },
-  {
-    city: 'Santorini',
-    country: 'Grécia',
-    image: 'https://images.unsplash.com/photo-1570077188670-e3a8d69ac5ff?auto=format&fit=crop&w=900&q=85',
-  },
-  {
-    city: 'Buenos Aires',
-    country: 'Argentina',
-    image: 'https://images.unsplash.com/photo-1589909202802-8f4aadce1849?auto=format&fit=crop&w=900&q=85',
-  },
+const destinations = [
+  { city: 'Paris', country: 'França', image: 'https://images.unsplash.com/photo-1502602898657-3e91760cbb34?auto=format&fit=crop&w=900&q=85' },
+  { city: 'Kyoto', country: 'Japão', image: 'https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?auto=format&fit=crop&w=900&q=85' },
+  { city: 'Bali', country: 'Indonésia', image: 'https://images.unsplash.com/photo-1537996194471-e657df975ab4?auto=format&fit=crop&w=900&q=85' },
+  { city: 'Lisboa', country: 'Portugal', image: 'https://images.unsplash.com/photo-1555881400-74d7acaacd8b?auto=format&fit=crop&w=900&q=85' },
+  { city: 'Santorini', country: 'Grécia', image: 'https://images.unsplash.com/photo-1570077188670-e3a8d69ac5ff?auto=format&fit=crop&w=900&q=85' },
+  { city: 'Buenos Aires', country: 'Argentina', image: 'https://images.unsplash.com/photo-1589909202802-8f4aadce1849?auto=format&fit=crop&w=900&q=85' }
 ]
 
-const INTERESTS = ['Gastronomia', 'Cultura', 'Natureza', 'Compras', 'Fotografia', 'Vida noturna']
+const interestsList = ['Gastronomia', 'Cultura', 'Natureza', 'Compras', 'Fotografia', 'Vida noturna']
 
-const ACTIVITY_BANK = {
+const activitiesByInterest = {
   Gastronomia: ['Café e mercado local', 'Restaurante típico', 'Experiência gastronômica'],
   Cultura: ['Museu e centro histórico', 'Marco cultural', 'Arquitetura local'],
   Natureza: ['Parque e mirante', 'Caminhada ao ar livre', 'Pôr do sol'],
   Compras: ['Distrito comercial', 'Lojas locais', 'Feira de design'],
   Fotografia: ['Ponto fotográfico', 'Caminhada fotográfica', 'Golden hour'],
-  'Vida noturna': ['Bar local', 'Bairro boêmio', 'Experiência noturna'],
+  'Vida noturna': ['Bar local', 'Bairro boêmio', 'Experiência noturna']
 }
 
-export default function TripBuilder({ onSaved }) {
-  const initial = JSON.parse(localStorage.getItem('atlas-react-trip') || 'null') || {
+const budgetParts = [
+  ['Hospedagem', 0.42],
+  ['Alimentação', 0.24],
+  ['Passeios', 0.18],
+  ['Transporte', 0.16]
+]
+
+function getSavedTrip() {
+  const savedTrip = localStorage.getItem('atlas-react-trip')
+
+  if (savedTrip) {
+    return JSON.parse(savedTrip)
+  }
+
+  return {
     destination: '',
     start: '',
     end: '',
     company: '',
     interests: [],
-    budget: 5000,
+    budget: 5000
+  }
+}
+
+function getTripDays(startDate, endDate) {
+  if (!startDate || !endDate) {
+    return 5
   }
 
+  const start = new Date(startDate)
+  const end = new Date(endDate)
+  const difference = end - start
+  const days = Math.ceil(difference / 86400000)
+
+  return Math.max(1, days)
+}
+
+function createItinerary(trip, tripDays) {
+  const selectedInterests = trip.interests.length > 0 ? trip.interests : ['Cultura']
+  const itinerary = []
+  const totalDays = Math.min(tripDays, 7)
+
+  for (let index = 0; index < totalDays; index++) {
+    const firstInterest = selectedInterests[index % selectedInterests.length]
+    const secondInterest = selectedInterests[(index + 1) % selectedInterests.length]
+    const firstActivities = activitiesByInterest[firstInterest]
+    const secondActivities = activitiesByInterest[secondInterest]
+
+    itinerary.push({
+      day: index + 1,
+      activities: [
+        ['09:30', firstActivities[index % firstActivities.length]],
+        ['14:00', secondActivities[(index + 1) % secondActivities.length]],
+        ['19:30', index % 2 === 0 ? 'Jantar e passeio pela região' : 'Tempo livre para explorar']
+      ]
+    })
+  }
+
+  return itinerary
+}
+
+export default function TripBuilder({ onSaved }) {
   const [step, setStep] = useState(1)
-  const [trip, setTrip] = useState(initial)
-  const [apiData, setApiData] = useState(null)
-  const [apiLoading, setApiLoading] = useState(false)
-  const [apiError, setApiError] = useState('')
+  const [trip, setTrip] = useState(getSavedTrip)
+  const [weatherData, setWeatherData] = useState(null)
+  const [weatherLoading, setWeatherLoading] = useState(false)
+  const [weatherError, setWeatherError] = useState('')
   const [generated, setGenerated] = useState(false)
 
-  const destination = DESTINATIONS.find(item => item.city === trip.destination)
+  const tripDays = getTripDays(trip.start, trip.end)
+  const itinerary = createItinerary(trip, tripDays)
+  const destination = destinations.find(function (item) {
+    return item.city === trip.destination
+  })
 
-  const tripDays = useMemo(() => {
-    if (!trip.start || !trip.end) return 5
-    const start = new Date(trip.start)
-    const end = new Date(trip.end)
-    return Math.max(1, Math.ceil((end - start) / 86400000))
-  }, [trip.start, trip.end])
+  function saveTrip(updatedTrip) {
+    setTrip(updatedTrip)
+    localStorage.setItem('atlas-react-trip', JSON.stringify(updatedTrip))
 
-  const save = nextTrip => {
-    setTrip(nextTrip)
-    localStorage.setItem('atlas-react-trip', JSON.stringify(nextTrip))
-    onSaved?.(true)
+    if (onSaved) {
+      onSaved(true)
+    }
   }
 
-  const chooseDestination = async city => {
-    const next = { ...trip, destination: city }
-    save(next)
-    setApiLoading(true)
-    setApiError('')
-    setApiData(null)
+  async function chooseDestination(city) {
+    const updatedTrip = {
+      ...trip,
+      destination: city
+    }
+
+    saveTrip(updatedTrip)
+    setWeatherLoading(true)
+    setWeatherError('')
+    setWeatherData(null)
 
     try {
       const data = await getDestinationWeather(city)
-      setApiData(data)
+      setWeatherData(data)
     } catch (error) {
-      setApiError(error.message)
-    } finally {
-      setApiLoading(false)
+      setWeatherError(error.message)
     }
+
+    setWeatherLoading(false)
   }
 
-  const toggleInterest = interest => {
-    const exists = trip.interests.includes(interest)
-    save({
+  function toggleInterest(interest) {
+    const alreadySelected = trip.interests.includes(interest)
+    let updatedInterests
+
+    if (alreadySelected) {
+      updatedInterests = trip.interests.filter(function (item) {
+        return item !== interest
+      })
+    } else {
+      updatedInterests = [...trip.interests, interest]
+    }
+
+    saveTrip({
       ...trip,
-      interests: exists
-        ? trip.interests.filter(item => item !== interest)
-        : [...trip.interests, interest],
+      interests: updatedInterests
     })
   }
 
-  const canAdvance = () => {
-    if (step === 1) return Boolean(trip.destination)
-    if (step === 2) return Boolean(trip.start && trip.end && new Date(trip.end) > new Date(trip.start))
-    if (step === 3) return Boolean(trip.company)
-    if (step === 4) return trip.interests.length > 0
+  function canAdvance() {
+    if (step === 1) {
+      return trip.destination !== ''
+    }
+
+    if (step === 2) {
+      return trip.start !== '' && trip.end !== '' && new Date(trip.end) > new Date(trip.start)
+    }
+
+    if (step === 3) {
+      return trip.company !== ''
+    }
+
+    if (step === 4) {
+      return trip.interests.length > 0
+    }
+
     return true
   }
 
-  const generate = () => {
-    if (!trip.destination || !trip.start || !trip.end || !trip.company || !trip.interests.length) {
+  function generateTrip() {
+    const completeTrip =
+      trip.destination &&
+      trip.start &&
+      trip.end &&
+      trip.company &&
+      trip.interests.length > 0
+
+    if (!completeTrip) {
       return
     }
-    save(trip)
+
+    saveTrip(trip)
     setGenerated(true)
-    setTimeout(() => document.querySelector('#resultado')?.scrollIntoView({ behavior: 'smooth' }), 20)
+
+    setTimeout(function () {
+      const resultSection = document.getElementById('resultado')
+      if (resultSection) {
+        resultSection.scrollIntoView({ behavior: 'smooth' })
+      }
+    }, 20)
   }
 
-  const itinerary = useMemo(() => {
-    const interests = trip.interests.length ? trip.interests : ['Cultura']
+  function editTrip() {
+    setGenerated(false)
+    setStep(1)
 
-    return Array.from({ length: Math.min(tripDays, 7) }, (_, index) => {
-      const first = interests[index % interests.length]
-      const second = interests[(index + 1) % interests.length]
-      const firstActivities = ACTIVITY_BANK[first]
-      const secondActivities = ACTIVITY_BANK[second]
-
-      return {
-        day: index + 1,
-        activities: [
-          ['09:30', firstActivities[index % firstActivities.length]],
-          ['14:00', secondActivities[(index + 1) % secondActivities.length]],
-          ['19:30', index % 2 ? 'Tempo livre para explorar' : 'Jantar e passeio pela região'],
-        ],
+    setTimeout(function () {
+      const builder = document.getElementById('builder')
+      if (builder) {
+        builder.scrollIntoView({ behavior: 'smooth' })
       }
-    })
-  }, [trip.interests, tripDays])
+    }, 10)
+  }
 
-  const breakdown = [
-    ['Hospedagem', 0.42],
-    ['Alimentação', 0.24],
-    ['Passeios', 0.18],
-    ['Transporte', 0.16],
-  ]
+  function formatMoney(value) {
+    return value.toLocaleString('pt-BR', {
+      style: 'currency',
+      currency: 'BRL',
+      maximumFractionDigits: 0
+    })
+  }
 
   return (
     <>
@@ -156,11 +215,13 @@ export default function TripBuilder({ onSaved }) {
           <p>SEU PLANO</p>
 
           <ol>
-            {['Destino', 'Datas', 'Companhia', 'Interesses', 'Orçamento'].map((label, index) => (
-              <li key={label} className={step === index + 1 ? 'active' : ''}>
-                <span>{String(index + 1).padStart(2, '0')}</span> {label}
-              </li>
-            ))}
+            {['Destino', 'Datas', 'Companhia', 'Interesses', 'Orçamento'].map(function (label, index) {
+              return (
+                <li key={label} className={step === index + 1 ? 'active' : ''}>
+                  <span>{String(index + 1).padStart(2, '0')}</span> {label}
+                </li>
+              )
+            })}
           </ol>
 
           <div className="progress">
@@ -176,29 +237,27 @@ export default function TripBuilder({ onSaved }) {
               <h2>Qual cenário vai<br />virar memória?</h2>
 
               <div className="destination-options">
-                {DESTINATIONS.map(item => (
-                  <button
-                    key={item.city}
-                    className={`destination-option ${trip.destination === item.city ? 'selected' : ''}`}
-                    onClick={() => chooseDestination(item.city)}
-                  >
-                    <img src={item.image} alt={item.city} />
-                    <div>
-                      <strong>{item.city}</strong>
-                      <small>{item.country}</small>
-                    </div>
-                  </button>
-                ))}
+                {destinations.map(function (item) {
+                  return (
+                    <button
+                      key={item.city}
+                      className={`destination-option ${trip.destination === item.city ? 'selected' : ''}`}
+                      onClick={function () { chooseDestination(item.city) }}
+                    >
+                      <img src={item.image} alt={item.city} />
+                      <div>
+                        <strong>{item.city}</strong>
+                        <small>{item.country}</small>
+                      </div>
+                    </button>
+                  )
+                })}
               </div>
 
-              <WeatherCard apiData={apiData} loading={apiLoading} error={apiError} />
+              <WeatherCard apiData={weatherData} loading={weatherLoading} error={weatherError} />
 
               <div className="step-actions right-only">
-                <button
-                  className="next"
-                  disabled={!canAdvance()}
-                  onClick={() => setStep(2)}
-                >
+                <button className="next" disabled={!canAdvance()} onClick={function () { setStep(2) }}>
                   Continuar →
                 </button>
               </div>
@@ -216,7 +275,9 @@ export default function TripBuilder({ onSaved }) {
                   <input
                     type="date"
                     value={trip.start}
-                    onChange={event => save({ ...trip, start: event.target.value })}
+                    onChange={function (event) {
+                      saveTrip({ ...trip, start: event.target.value })
+                    }}
                   />
                 </label>
 
@@ -225,14 +286,16 @@ export default function TripBuilder({ onSaved }) {
                   <input
                     type="date"
                     value={trip.end}
-                    onChange={event => save({ ...trip, end: event.target.value })}
+                    onChange={function (event) {
+                      saveTrip({ ...trip, end: event.target.value })
+                    }}
                   />
                 </label>
               </div>
 
               <div className="step-actions">
-                <button onClick={() => setStep(1)}>← Voltar</button>
-                <button className="next" disabled={!canAdvance()} onClick={() => setStep(3)}>
+                <button onClick={function () { setStep(1) }}>← Voltar</button>
+                <button className="next" disabled={!canAdvance()} onClick={function () { setStep(3) }}>
                   Continuar →
                 </button>
               </div>
@@ -249,23 +312,28 @@ export default function TripBuilder({ onSaved }) {
                   ['Solo', 'liberdade total'],
                   ['Casal', 'dois na rota'],
                   ['Amigos', 'histórias em grupo'],
-                  ['Família', 'para todo mundo'],
-                ].map(([label, caption], index) => (
-                  <button
-                    key={label}
-                    className={trip.company === label ? 'selected' : ''}
-                    onClick={() => save({ ...trip, company: label })}
-                  >
-                    <b>{String(index + 1).padStart(2, '0')}</b>
-                    <span>{label}</span>
-                    <small>{caption}</small>
-                  </button>
-                ))}
+                  ['Família', 'para todo mundo']
+                ].map(function (option, index) {
+                  const label = option[0]
+                  const caption = option[1]
+
+                  return (
+                    <button
+                      key={label}
+                      className={trip.company === label ? 'selected' : ''}
+                      onClick={function () { saveTrip({ ...trip, company: label }) }}
+                    >
+                      <b>{String(index + 1).padStart(2, '0')}</b>
+                      <span>{label}</span>
+                      <small>{caption}</small>
+                    </button>
+                  )
+                })}
               </div>
 
               <div className="step-actions">
-                <button onClick={() => setStep(2)}>← Voltar</button>
-                <button className="next" disabled={!canAdvance()} onClick={() => setStep(4)}>
+                <button onClick={function () { setStep(2) }}>← Voltar</button>
+                <button className="next" disabled={!canAdvance()} onClick={function () { setStep(4) }}>
                   Continuar →
                 </button>
               </div>
@@ -278,20 +346,24 @@ export default function TripBuilder({ onSaved }) {
               <h2>O que não pode<br />faltar?</h2>
 
               <div className="interest-grid">
-                {INTERESTS.map(interest => (
-                  <button
-                    key={interest}
-                    className={trip.interests.includes(interest) ? 'selected' : ''}
-                    onClick={() => toggleInterest(interest)}
-                  >
-                    {interest} <span>{trip.interests.includes(interest) ? '✓' : '＋'}</span>
-                  </button>
-                ))}
+                {interestsList.map(function (interest) {
+                  const selected = trip.interests.includes(interest)
+
+                  return (
+                    <button
+                      key={interest}
+                      className={selected ? 'selected' : ''}
+                      onClick={function () { toggleInterest(interest) }}
+                    >
+                      {interest} <span>{selected ? '✓' : '＋'}</span>
+                    </button>
+                  )
+                })}
               </div>
 
               <div className="step-actions">
-                <button onClick={() => setStep(3)}>← Voltar</button>
-                <button className="next" disabled={!canAdvance()} onClick={() => setStep(5)}>
+                <button onClick={function () { setStep(3) }}>← Voltar</button>
+                <button className="next" disabled={!canAdvance()} onClick={function () { setStep(5) }}>
                   Continuar →
                 </button>
               </div>
@@ -310,7 +382,9 @@ export default function TripBuilder({ onSaved }) {
                   min="500"
                   step="100"
                   value={trip.budget}
-                  onChange={event => save({ ...trip, budget: Number(event.target.value) })}
+                  onChange={function (event) {
+                    saveTrip({ ...trip, budget: Number(event.target.value) })
+                  }}
                 />
               </div>
 
@@ -321,7 +395,9 @@ export default function TripBuilder({ onSaved }) {
                 max="15000"
                 step="500"
                 value={Math.min(15000, trip.budget)}
-                onChange={event => save({ ...trip, budget: Number(event.target.value) })}
+                onChange={function (event) {
+                  saveTrip({ ...trip, budget: Number(event.target.value) })
+                }}
               />
 
               <div className="range-labels">
@@ -330,8 +406,8 @@ export default function TripBuilder({ onSaved }) {
               </div>
 
               <div className="step-actions">
-                <button onClick={() => setStep(4)}>← Voltar</button>
-                <button className="generate" onClick={generate}>Gerar meu roteiro ✦</button>
+                <button onClick={function () { setStep(4) }}>← Voltar</button>
+                <button className="generate" onClick={generateTrip}>Gerar meu roteiro ✦</button>
               </div>
             </section>
           )}
@@ -357,54 +433,50 @@ export default function TripBuilder({ onSaved }) {
             <div className="timeline-wrap">
               <div className="timeline-head">
                 <h3>ITINERÁRIO</h3>
-                <button onClick={() => {
-                  setGenerated(false)
-                  setStep(1)
-                  setTimeout(() => document.querySelector('#builder')?.scrollIntoView({ behavior: 'smooth' }), 10)
-                }}>Editar viagem</button>
+                <button onClick={editTrip}>Editar viagem</button>
               </div>
 
-              {itinerary.map(day => (
-                <div className="day-block" key={day.day}>
-                  <div className="day-number">DIA {String(day.day).padStart(2, '0')}</div>
-                  <div>
-                    {day.activities.map(([time, activity]) => (
-                      <div className="activity" key={`${day.day}-${time}`}>
-                        <span>{time}</span>
-                        <strong>{activity}</strong>
-                      </div>
-                    ))}
+              {itinerary.map(function (day) {
+                return (
+                  <div className="day-block" key={day.day}>
+                    <div className="day-number">DIA {String(day.day).padStart(2, '0')}</div>
+                    <div>
+                      {day.activities.map(function (activity) {
+                        const time = activity[0]
+                        const description = activity[1]
+
+                        return (
+                          <div className="activity" key={`${day.day}-${time}`}>
+                            <span>{time}</span>
+                            <strong>{description}</strong>
+                          </div>
+                        )
+                      })}
+                    </div>
                   </div>
-                </div>
-              ))}
+                )
+              })}
             </div>
 
             <aside className="budget-card">
               <span>ESTIMATIVA</span>
               <h3>ORÇAMENTO</h3>
 
-              {breakdown.map(([name, percentage]) => (
-                <div className="budget-row" key={name}>
-                  <span>{name}</span>
-                  <strong>
-                    {(trip.budget * percentage).toLocaleString('pt-BR', {
-                      style: 'currency',
-                      currency: 'BRL',
-                      maximumFractionDigits: 0,
-                    })}
-                  </strong>
-                </div>
-              ))}
+              {budgetParts.map(function (item) {
+                const name = item[0]
+                const percentage = item[1]
+
+                return (
+                  <div className="budget-row" key={name}>
+                    <span>{name}</span>
+                    <strong>{formatMoney(trip.budget * percentage)}</strong>
+                  </div>
+                )
+              })}
 
               <div className="budget-total">
                 <span>TOTAL</span>
-                <strong>
-                  {trip.budget.toLocaleString('pt-BR', {
-                    style: 'currency',
-                    currency: 'BRL',
-                    maximumFractionDigits: 0,
-                  })}
-                </strong>
+                <strong>{formatMoney(trip.budget)}</strong>
               </div>
             </aside>
           </div>
